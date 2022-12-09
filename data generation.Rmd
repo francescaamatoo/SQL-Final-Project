@@ -1,0 +1,322 @@
+---
+title: "data generation"
+author: "Francesca Amato"
+date: "2022-11-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+``` 
+
+```{r libraries, include=FALSE}
+library(dplyr)
+library(data.table)
+```
+
+```{r wd}
+setwd("~/Dropbox/Columbia/Fall 2022/SQL/Final/Data")
+```
+
+```{r data}
+setwd("~/Dropbox/Columbia/Fall 2022/SQL/Final/Data/Original")
+one <- read.csv("Search Listings Etsy(1).csv")
+two <- read.csv("Search Listings Etsy(2).csv")
+three <- read.csv("Search Listings Etsy(3).csv") 
+histret <- read.csv("Order Histories & Return Data.csv")
+mark.attempts <- read.csv("marketing attempt.csv")
+mark.reason <- read.csv("marketing reason.csv")
+mark.technique <- read.csv("marketing technique.csv")
+views <- read.csv("product views.csv")
+m1 <- read.csv("MOCK_DATA.CSV")
+m2 <- read.csv("MOCK_DATA-2.CSV")
+m3 <- read.csv("MOCK_DATA-3.CSV")
+m4 <- read.csv("MOCK_DATA-4.CSV")
+m5 <- read.csv("MOCK_DATA-5.CSV")
+m6 <- read.csv("MOCK_DATA-6.CSV")
+m7 <- read.csv("MOCK_DATA-7.CSV")
+m8 <- read.csv("MOCK_DATA-8.CSV")
+m9 <- read.csv("MOCK_DATA-9.CSV")
+m10 <- read.csv("MOCK_DATA-10.CSV")
+m11 <- read.csv("MOCK_DATA-11.CSV")
+m12 <- read.csv("MOCK_DATA-12.CSV")
+m13 <- read.csv("MOCK_DATA-13.CSV")
+m14 <- read.csv("MOCK_DATA-14.CSV")
+m15 <- read.csv("MOCK_DATA-15.CSV")
+m16 <- read.csv("MOCK_DATA-16.CSV")
+m17 <- read.csv("MOCK_DATA-17.CSV")
+m18 <- read.csv("MOCK_DATA-18.CSV")
+m19 <- read.csv("MOCK_DATA-19.CSV")
+m20 <- read.csv("MOCK_DATA-20.CSV")
+
+setwd("../")
+shops <- read.csv("shops.csv")
+employees <- read.csv("employees.csv")
+products <- read.csv("products.csv")
+web.views <- read.csv("website_views.csv")
+```
+
+##### CUSTOMERS #####
+
+```{r}
+customers <- rbind(m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11,m12,m13,m14,m15,m16,m17,m18,m19,m20)
+set.seed(43)
+customers$customer_id <- sample(100000:999999, nrow(customers), replace = F)
+customers <- customers[, c(7,1:6)]
+```
+
+```{r}
+write.csv(customers, "customers.csv", row.names = F)
+```
+
+```{r}
+products$price <- as.numeric(products$price)
+```
+
+```{r}
+write.csv(products, "products.csv", row.names = FALSE)
+```
+
+##### PRODUCTS AND SHOP #####
+
+Remove white space and combine:
+
+```{r}
+alldata <- rbind(one, two, three)
+
+alldata$Name <- trimws(alldata$Name, which = "both")
+alldata$Badget <- trimws(alldata$Badget, which = "both")
+```
+
+generate a product id and reorder the columns:
+
+```{r}
+set.seed(10)
+alldata$product_id <- sample(100000:999999, nrow(alldata), replace = F)
+alldata <- alldata[, c(9,1,2,3,4,5,6,7,8)]
+```
+
+replace shop name with shop id:
+
+```{r}
+set.seed(10)
+alldata$Seller <- sample(shops$shop_id, nrow(alldata), replace = T)
+```
+
+rename columns:
+
+```{r}
+alldata <- alldata %>%
+  rename(product_name = Name,
+         seller_id = Seller,
+         rating = Rating,
+         reviews = Number_of_reviews,
+         price = Price,
+         badget = Badget)
+```
+
+generating ratings and reviews:
+
+```{r}
+alldata$rating <- round(runif(nrow(alldata), 0.0, 5.0), 1)
+alldata$reviews <- sample(1:15000, nrow(alldata), replace = T)
+```
+
+write the data:
+
+```{r}
+write.csv(alldata, "products.csv", row.names = FALSE)
+```
+
+##### EMPLOYEES AND MANAGERS #####
+
+```{r}
+employees <- as.data.table(employees)
+```
+
+```{r}
+dep <- function(depn, n) {
+  dep <- employees[department_id == depn,]
+  
+  set.seed(10)
+  managers <- sample(dep$id, n, replace = FALSE)
+  employee_id <- dep[!(id %in% managers), id]
+  set.seed(12)
+  manager_id <- sample(managers, length(employee_id), replace = TRUE)
+  department_id <- rep(depn, length(employee_id))
+  
+  data.frame(manager_id, employee_id, department_id)
+}
+```
+
+```{r}
+dep1 <- dep(1, 15)
+dep2 <- dep(2, 14)
+dep3 <- dep(3, 12)
+dep4 <- dep(4, 11)
+dep5 <- dep(5, 12)
+dep6 <- dep(6, 13)
+dep7 <- dep(7, 14)
+dep8 <- dep(8, 16)
+dep9 <- dep(9, 14)
+dep10 <- dep(10, 13)
+dep11 <- dep(11, 12)
+dep12 <- dep(12, 10)
+dep13 <- dep(13, 15)
+dep14 <- dep(14, 11)
+dep15 <- dep(15, 10)
+dep16 <- dep(16, 11)
+dep17 <- dep(17, 14)
+dep18 <- dep(18, 15)
+dep19 <- dep(19, 16)
+
+managers <- rbind(dep1, dep2, dep3, dep4, dep5, dep6, dep7, dep8, dep9, dep10, dep11, dep12, dep13, dep14, dep15, dep16, dep17, dep18, dep19)
+```
+
+```{r}
+write.csv(managers, "managers.csv", row.names = F)
+```
+
+##### ORDER HISTORIES AND RETURNS #####
+
+```{r}
+prod.id <- products$product_id
+cust.id <- customers$customer_id
+
+set.seed(10)
+product_id <- sample(prod.id, 70000, replace = TRUE)
+set.seed(11)
+customer_id <- sample(cust.id, 70000, replace = TRUE)
+set.seed(12)
+quantity <- sample(1:10, 70000, replace = TRUE)
+set.seed(13)
+order_id <- sample(100000:999999, 70000, replace = FALSE)
+
+base <- data.frame(order_id, customer_id, product_id, quantity)
+```
+
+```{r}
+histories <- as.data.table(merge(base, products, by='product_id'))
+order.histories <- na.omit(histories[, .(order_id, customer_id, product_id, quantity, order_total = quantity*price)])
+```
+
+```{r}
+write.csv(order.histories, "orders.csv", row.names = FALSE)
+```
+
+```{r}
+orders <- read.csv("orders.csv")
+```
+
+```{r}
+return_id <- sample(100000:999999, 20000, replace = FALSE)
+order_id <- sample(orders$order_id, 20000, replace = FALSE)
+returns <- as.data.table(data.frame(return_id, order_id))
+```
+
+```{r}
+base <- merge(merge(returns, orders, by='order_id'), products, by='product_id')
+
+set.seed(10)
+returns <- base[, .(return_id, order_id, quantity_returned = sample(1:quantity), price),][, .(return_id, order_id, quantity_returned, return_amount = quantity_returned*price)]
+```
+
+##### RETURN METHOD AND RETURN REASON #####
+
+```{r}
+return_method_id <- c(1,2,3,4)
+method_description <- c("USPS Mail", "UPS Mail", "Digital Return", "FedEx Mail")
+
+return_methods <- data.frame(return_method_id, method_description)
+write.csv(return_methods, "return_methods.csv", row.names = FALSE)
+```
+
+```{r}
+return_reason_id <- c(1,2,3,4,5,6,7,8,9,10,11)
+reason_description <- c("Item defective or doesn't work", "Exchange", "No longer needed", "Item arrived too late", "Missing or broken parts", "Better price available", "Inaccurate website description", "Didn't approve purchase", "Bought by mistake", "Product damaged", "Wrong item sent")
+
+return_reasons <- data.frame(return_reason_id, reason_description)
+write.csv(return_reasons, "return_reasons.csv", row.names = FALSE)
+```
+
+```{r}
+set.seed(20)
+returns$return_reason_id <- sample(return_reasons$return_reason_id, nrow(returns), replace = TRUE)
+set.seed(21)
+returns$return_method_id <- sample(return_methods$return_method_id, nrow(returns), replace = TRUE)
+```
+
+```{r}
+write.csv(returns, "returns.csv", row.names = FALSE)
+```
+
+##### MARKETING ATTEMPTS AND REASONS #####
+
+```{r}
+mark.technique$technique_id <- c(1,2,3,4)
+mark.reason$reason_id <- c(1,2,3,4)
+
+set.seed(1)
+mark.attempts$technique_id <- sample(1:4, nrow(mark.attempts), replace = TRUE)
+set.seed(2)
+mark.attempts$reason_id <- sample(1:4, nrow(mark.attempts), replace = TRUE)
+```
+
+```{r}
+write.csv(mark.technique, "interaction_techniques.csv", row.names = FALSE)
+write.csv(mark.reason, "interaction_reasons.csv", row.names = FALSE)
+```
+
+```{r}
+set.seed(10)
+interaction_id <- sample(100000:999999, 200000, replace = FALSE)
+set.seed(100)
+customer_id <- sample(customers$customer_id, 200000, replace = TRUE)
+set.seed(1000)
+employee_id <- sample(employees$id, 200000, replace = TRUE)
+
+interactions <- data.frame(interaction_id, customer_id, employee_id)
+```
+
+```{r}
+set.seed(101)
+interactions$technique_id <- sample(mark.technique$technique_id, nrow(interactions), replace = TRUE)
+set.seed(102)
+interactions$reason_id <- sample(mark.reason$reason_id, nrow(interactions), replace = TRUE)
+```
+
+```{r}
+write.csv(interactions, "interactions.csv", row.names = FALSE)
+```
+
+##### PRODUCT VIEWS #####
+
+```{r}
+set.seed(103)
+views$product_id <- sample(products$product_id, nrow(views), replace = TRUE)
+set.seed(104)
+views$total_seconds <- round(runif(nrow(views), 0.01, 360.00),2)
+
+views <- views %>%
+  rename("view_date" = "date",
+         "view_time" = "time")
+
+web.views <- views[, c(1:4,6)]
+web.views$view_id <- sample(100000:999999, nrow(web.views), replace = FALSE)
+web.views <- web.views[,c(6,1:5)]
+```
+
+```{r}
+write.csv(web.views, "website_views.csv", row.names = FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
